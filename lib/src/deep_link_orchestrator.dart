@@ -274,7 +274,7 @@ class DeepLinkOrchestrator {
 
     // Only a completed handle should suppress a retry of the same URI.
     final result = await _processIntent(intent);
-    if (result != DeepLinkDispatchResult.handled) {
+    if (result != .handled) {
       _deduplicationStrategy.forget(intent);
     }
   }
@@ -286,7 +286,7 @@ class DeepLinkOrchestrator {
       final reason = _validationPolicy.failureReason(intent.uri);
       if (reason != null) {
         _logger.warn(message: reason);
-        return DeepLinkDispatchResult.failed;
+        return .failed;
       }
 
       final resolved = _intentResolver?.call(intent) ?? intent;
@@ -303,7 +303,7 @@ class DeepLinkOrchestrator {
         ),
       );
 
-      if (result == DeepLinkDispatchResult.noHandler) {
+      if (result == .noHandler) {
         _logger.warn(
           message: 'No handler registered for ${resolved.runtimeType}',
         );
@@ -316,7 +316,7 @@ class DeepLinkOrchestrator {
         stackTrace: stackTrace,
         error: error,
       );
-      return DeepLinkDispatchResult.failed;
+      return .failed;
     } finally {
       // A URI survives only when this pass deliberately deferred it. Anything
       // else (handled, unroutable, invalid, or thrown) drops the stored link

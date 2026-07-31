@@ -18,7 +18,7 @@ Built on top of [`app_links`](https://pub.dev/packages/app_links) with zero addi
 
 ```yaml
 dependencies:
-  deep_link_orchestrator: ^1.0.0
+  deep_link_orchestrator: ^1.0.5
 ```
 
 ```bash

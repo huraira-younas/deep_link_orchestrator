@@ -87,15 +87,15 @@ class DeepLinkDispatcher {
     final handler = _handlers[intent.runtimeType];
 
     if (handler == null || !handler.canHandle(intent)) {
-      return DeepLinkDispatchResult.noHandler;
+      return .noHandler;
     }
 
     if (handler.requiresAuthentication && !context.authPolicy.isAuthenticated) {
       await context.pendingStore.savePending(intent.uri);
-      return DeepLinkDispatchResult.authDeferred;
+      return .authDeferred;
     }
 
     await handler.handle(context: context, intent: intent);
-    return DeepLinkDispatchResult.handled;
+    return .handled;
   }
 }

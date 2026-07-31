@@ -50,9 +50,10 @@ class DeepLinkValidator implements DeepLinkValidationPolicy {
   const DeepLinkValidator({
     required this.expectedHost,
     required this.customScheme,
-    this.supportedPaths = const <String>[],
+
     this.allowedSubdomains = const <String>['www'],
     this.additionalHosts = const <String>{},
+    this.supportedPaths = const <String>[],
     this.allowRootPath = false,
   });
 

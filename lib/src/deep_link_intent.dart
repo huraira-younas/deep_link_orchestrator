@@ -63,10 +63,10 @@ abstract class DeepLinkIntent {
 
   /// Serialises this intent to a JSON-compatible map.
   Map<String, Object?> toJson() => {
-    'uri': uri.toString(),
-    'sourceId': sourceId,
     'attributes': attributes,
     'isDeferred': isDeferred,
+    'uri': uri.toString(),
+    'sourceId': sourceId,
   };
 }
 
@@ -86,9 +86,9 @@ class RawDeepLinkIntent extends DeepLinkIntent {
 
   @override
   Map<String, Object?> toJson() => {
-    'sourceId': sourceId,
-    'uri': uri.toString(),
     'attributes': attributes,
     'isDeferred': isDeferred,
+    'uri': uri.toString(),
+    'sourceId': sourceId,
   };
 }
