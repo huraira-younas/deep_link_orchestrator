@@ -1,7 +1,7 @@
 name: deep_link_orchestrator
 description: >-
   Type-safe deep link orchestration for Flutter with validation, deduplication, auth gating, and pluggable sources and handlers.
-version: 1.0.5
+version: 1.0.6
 
 repository: https://github.com/huraira-younas/deep_link_orchestrator
 
