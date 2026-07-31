@@ -35,21 +35,30 @@ abstract interface class DeepLinkAuthenticationPolicy {
   bool get isAuthenticated;
 }
 
-/// Computes a stable fingerprint for a [DeepLinkIntent].
+/// Decides whether an incoming [DeepLinkIntent] is a duplicate.
 ///
-/// [DeepLinkOrchestrator] uses the fingerprint to suppress duplicate intents
-/// (e.g. the same URI arriving from multiple sources within one interaction).
+/// The strategy owns its own bookkeeping, so implementations are free to
+/// remember one intent, many, or none at all. [DeepLinkOrchestrator] calls
+/// [shouldProcess] once per intent and calls [forget] again if processing did
+/// not complete, so a transient failure never permanently blocks a link.
+///
+/// Intents are identified by [DeepLinkIntent.dedupeKey]; override that getter
+/// on your intent type to change what counts as the same link.
 ///
 /// See also:
-/// - [DefaultDeepLinkDeduplicationStrategy] — fingerprints by sourceId + URI.
-/// - [TimeWindowDeepLinkDeduplicationStrategy] — fingerprints within a time
-///   window so the same URI can be re-processed after a configurable delay.
+/// - [DefaultDeepLinkDeduplicationStrategy] for suppressing a URI for the
+///   lifetime of the session.
+/// - [TimeWindowDeepLinkDeduplicationStrategy] for suppressing a URI only
+///   within a rolling window.
 abstract interface class DeepLinkDeduplicationStrategy {
-  /// Returns a fingerprint string that uniquely identifies [intent].
-  ///
-  /// Two intents that should be considered duplicates must return the same
-  /// string.
-  String fingerprintOf(DeepLinkIntent intent);
+  /// Whether [intent] should be processed, recording it as seen when `true`.
+  bool shouldProcess(DeepLinkIntent intent);
+
+  /// Drops any record of [intent] so it can be processed again.
+  void forget(DeepLinkIntent intent);
+
+  /// Drops every recorded intent.
+  void reset();
 }
 
 /// Persists a pending [Uri] so it can be replayed after authentication.
@@ -104,31 +113,40 @@ class AlwaysAuthenticatedPolicy implements DeepLinkAuthenticationPolicy {
   bool get isAuthenticated => true;
 }
 
-/// A [DeepLinkDeduplicationStrategy] that fingerprints by `sourceId:uri`.
+/// A [DeepLinkDeduplicationStrategy] that suppresses a URI for the lifetime
+/// of the session.
 ///
-/// Two intents with identical source identifiers and URIs are treated as
-/// duplicates regardless of when they arrive. This is appropriate for most
-/// apps where re-navigating to the same destination in the same session is
-/// undesirable.
+/// Once a link has been handled it is never handled again until
+/// [DeepLinkOrchestrator.resetDeduplication] is called. Appropriate when
+/// re-navigating to the same destination in one session is undesirable.
+///
+/// This strategy is stateful; create one instance per orchestrator.
 class DefaultDeepLinkDeduplicationStrategy
     implements DeepLinkDeduplicationStrategy {
   /// Creates a [DefaultDeepLinkDeduplicationStrategy].
-  const DefaultDeepLinkDeduplicationStrategy();
+  DefaultDeepLinkDeduplicationStrategy();
 
-  /// Returns `'${intent.sourceId}:${intent.uri}'`.
+  final Set<String> _seen = <String>{};
+
   @override
-  String fingerprintOf(DeepLinkIntent intent) =>
-      '${intent.sourceId}:${intent.uri}';
+  bool shouldProcess(DeepLinkIntent intent) => _seen.add(intent.dedupeKey);
+
+  @override
+  void forget(DeepLinkIntent intent) => _seen.remove(intent.dedupeKey);
+
+  @override
+  void reset() => _seen.clear();
 }
 
 /// A [DeepLinkDeduplicationStrategy] that suppresses duplicates only within
 /// a rolling time window.
 ///
 /// After [windowDuration] has elapsed the same URI is treated as a new
-/// intent, allowing intentional re-navigation to the same destination.
+/// intent, allowing intentional re-navigation to the same destination. This
+/// is the right choice for most apps: it absorbs platform double-fires
+/// without permanently blocking a link the user taps again later.
 ///
-/// This strategy is stateful; create a single instance and reuse it for the
-/// lifetime of the orchestrator.
+/// This strategy is stateful; create one instance per orchestrator.
 class TimeWindowDeepLinkDeduplicationStrategy
     implements DeepLinkDeduplicationStrategy {
   /// Creates a [TimeWindowDeepLinkDeduplicationStrategy].
@@ -142,24 +160,44 @@ class TimeWindowDeepLinkDeduplicationStrategy
   /// The duration during which identical intents are considered duplicates.
   final Duration windowDuration;
 
-  String? _lastEmittedFingerprint;
-  String? _lastSemanticKey;
-  DateTime? _expiresAt;
+  final Map<String, DateTime> _expiryByKey = <String, DateTime>{};
 
   @override
-  String fingerprintOf(DeepLinkIntent intent) {
-    final semanticKey = '${intent.sourceId}:${intent.uri}';
+  bool shouldProcess(DeepLinkIntent intent) {
     final now = DateTime.now();
+    _expiryByKey.removeWhere((_, expiry) => !now.isBefore(expiry));
 
-    if (_lastSemanticKey == semanticKey && now.isBefore(_expiresAt!)) {
-      return _lastEmittedFingerprint!;
-    }
+    final key = intent.dedupeKey;
+    if (_expiryByKey.containsKey(key)) return false;
 
-    _lastSemanticKey = semanticKey;
-    _expiresAt = now.add(windowDuration);
-    return _lastEmittedFingerprint =
-        '$semanticKey#${now.microsecondsSinceEpoch}';
+    _expiryByKey[key] = now.add(windowDuration);
+    return true;
   }
+
+  @override
+  void forget(DeepLinkIntent intent) => _expiryByKey.remove(intent.dedupeKey);
+
+  @override
+  void reset() => _expiryByKey.clear();
+}
+
+/// A [DeepLinkDeduplicationStrategy] that processes every intent.
+///
+/// Use when the platform is known not to double-fire, or when duplicate
+/// handling is idempotent and cheap.
+class NoopDeepLinkDeduplicationStrategy
+    implements DeepLinkDeduplicationStrategy {
+  /// Creates a [NoopDeepLinkDeduplicationStrategy].
+  const NoopDeepLinkDeduplicationStrategy();
+
+  @override
+  bool shouldProcess(DeepLinkIntent intent) => true;
+
+  @override
+  void forget(DeepLinkIntent intent) {}
+
+  @override
+  void reset() {}
 }
 
 /// A [DeepLinkPendingStore] that silently discards all pending URIs.

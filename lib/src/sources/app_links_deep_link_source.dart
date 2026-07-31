@@ -26,7 +26,7 @@ class AppLinksDeepLinkSource implements DeepLinkSource {
   ///
   /// [appLinks] may be provided for testing; defaults to `AppLinks()`.
   AppLinksDeepLinkSource({AppLinks? appLinks})
-      : _appLinks = appLinks ?? AppLinks();
+    : _appLinks = appLinks ?? AppLinks();
 
   /// The source identifier used in every [RawDeepLinkIntent] this source
   /// produces.

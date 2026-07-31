@@ -3,70 +3,42 @@ import 'package:flutter/widgets.dart';
 
 import 'intents.dart';
 
-class ProfileHandler extends DeepLinkHandler {
-  @override
-  bool get requiresAuthentication => false;
-
+class ProfileHandler extends TypedDeepLinkHandler<ProfileIntent> {
   ProfileHandler(this.onNavigate);
 
   final void Function(String userId) onNavigate;
 
   @override
-  bool canHandle(DeepLinkIntent intent) => intent is ProfileIntent;
-
-  @override
-  Future<void> handle({
-    required DeepLinkHandlerContext context,
-    required DeepLinkIntent intent,
-  }) async {
-    final profile = intent as ProfileIntent;
-    debugPrint('[ProfileHandler] Navigating to user: ${profile.userId}');
-    onNavigate(profile.userId);
+  Future<void> onHandle(ProfileIntent intent, DeepLinkHandlerContext _) async {
+    debugPrint('[ProfileHandler] Navigating to user: ${intent.userId}');
+    onNavigate(intent.userId);
   }
 }
 
-class InviteHandler extends DeepLinkHandler {
+class InviteHandler extends TypedDeepLinkHandler<InviteIntent> {
   InviteHandler(this.onInvite);
 
   final void Function(String code) onInvite;
 
+  /// Deferred through the pending store until the user signs in.
   @override
   bool get requiresAuthentication => true;
 
   @override
-  bool canHandle(DeepLinkIntent intent) => intent is InviteIntent;
-
-  @override
-  Future<void> handle({
-    required DeepLinkHandlerContext context,
-    required DeepLinkIntent intent,
-  }) async {
-    final invite = intent as InviteIntent;
-    debugPrint('[InviteHandler] Accepting invite: ${invite.inviteCode}');
-    onInvite(invite.inviteCode);
+  Future<void> onHandle(InviteIntent intent, DeepLinkHandlerContext _) async {
+    debugPrint('[InviteHandler] Accepting invite: ${intent.inviteCode}');
+    onInvite(intent.inviteCode);
   }
 }
 
-class SettingsHandler extends DeepLinkHandler {
-  @override
-  bool get requiresAuthentication => false;
-
+class SettingsHandler extends TypedDeepLinkHandler<SettingsIntent> {
   SettingsHandler(this.onNavigate);
 
   final void Function(String? section) onNavigate;
 
   @override
-  bool canHandle(DeepLinkIntent intent) => intent is SettingsIntent;
-
-  @override
-  Future<void> handle({
-    required DeepLinkHandlerContext context,
-    required DeepLinkIntent intent,
-  }) async {
-    final settings = intent as SettingsIntent;
-    debugPrint(
-      '[SettingsHandler] Opening settings: ${settings.section ?? "root"}',
-    );
-    onNavigate(settings.section);
+  Future<void> onHandle(SettingsIntent intent, DeepLinkHandlerContext _) async {
+    debugPrint('[SettingsHandler] Opening: ${intent.section ?? "root"}');
+    onNavigate(intent.section);
   }
 }

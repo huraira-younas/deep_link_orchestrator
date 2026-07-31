@@ -54,6 +54,13 @@ abstract class DeepLinkIntent {
   /// The URI carried by this deep link.
   final Uri uri;
 
+  /// Stable identity used for debouncing and deduplication.
+  ///
+  /// Two intents sharing a [dedupeKey] represent the same open of the same
+  /// destination. Override this to widen or narrow what counts as a
+  /// duplicate, for example to ignore a tracking query parameter.
+  String get dedupeKey => '$sourceId:$uri';
+
   /// Serialises this intent to a JSON-compatible map.
   Map<String, Object?> toJson() => {
     'uri': uri.toString(),
